@@ -1,0 +1,190 @@
+---
+title: "Post With Code"
+author: "Harlow Malloc"
+date: "2023-11-07"
+categories: [news, code, analysis]
+image: "image.jpg"
+---
+
+This is a post with executable code.
+
+```{python}
+# Import Libary
+import numpy as np # linear algebra
+import pandas as pd # data processing
+
+# Libraries for visualization:
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.offline import init_notebook_mode, iplot
+init_notebook_mode(connected = True)
+from plotly.subplots import make_subplots
+
+import warnings
+warnings.filterwarnings("ignore")
+
+```
+
+```{python}
+data=pd.read_csv("breast-cancer.csv")
+
+
+data.head()
+```
+
+```{python}
+# Download and prepare the data
+data.drop(["id"],axis=1,inplace=True)
+```
+
+
+```{python}
+data.describe()
+```
+
+
+```{python}
+# Check for missing value:
+data.isnull().sum()
+```
+
+```{python}
+data.hist(figsize = (18,17),color = 'orange',edgecolor = 'black');
+```
+
+Data Visualization
+
+Histogram
+A histogram is a bar graph representation of a grouped data distribution. In other words, it is the transfer of data consisting of repetitive numbers to the table first, and to the chart by using the table, in other words, the graph of the data groups is displayed in rectangular columns.
+
+```{python}
+# Check strength of the relationship between variables:
+corr=data.corr(numeric_only = True)
+f,ax=plt.subplots(figsize=(15,15))
+sns.heatmap(corr,annot=True,linewidths=0.5,fmt=".1f",ax=ax,cmap="YlGnBu",square=True)
+plt.show()
+```
+
+Countplot and PiePlot
+A count plot can be thought of as a histogram across a categorical, instead of quantitative, variable. A Pie Chart is a type of graph that displays data in a circular graph. The pieces of the graph are proportional to the fraction of the whole in each category.
+
+We examined distribution of outcome with countplot and pieplot.
+
+```{python}
+print('Count of M or B cells in diagnosis:')
+data['diagnosis'].value_counts()
+```
+
+```{python}
+# Plot distribution
+data['diagnosis'].value_counts().plot(kind='pie', labels = ['', ''], autopct = '%1.1F%%', colors = ['#9091b1','#e1b0cd'], 
+                                    explode = [0,0.05], textprops = {'fontsize':15})
+plt.legend(labels=['Benign', 'Malignant'], fontsize=12)
+plt.title('Distributions of the target variable\n', fontsize=20, color = '#6a6a6a', y=1.03)
+plt.show()
+```
+
+```{python}
+sns.countplot(x='diagnosis',data=data,palette='Greens_d')
+plt.show()
+
+## M for Malignant
+## B for Benign
+```
+
+```{python}
+#Libraries for ML model
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from xgboost import XGBClassifier
+from sklearn.naive_bayes import GaussianNB
+from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
+from sklearn.metrics import classification_report,confusion_matrix,accuracy_score,f1_score,recall_score,precision_score,roc_auc_score
+```
+
+```{python}
+y=data["diagnosis"]
+X=data.drop(["diagnosis"],axis=1)
+print("X shape",X.shape)
+print("y shape",y.shape)
+```
+
+```{python}
+one_hot=LabelBinarizer()
+y=one_hot.fit_transform(y)
+```
+
+```{python}
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.30,random_state=42,shuffle=True)
+```
+
+```{python}
+print("X_train shape",X_train.shape)
+print("y_train shape",y_train.shape)
+print("X_test shape",X_test.shape)
+print("y_test shape",y_test.shape)
+```
+
+```{python}
+# Lets create model:
+def classification_models(model):
+    y_pred=model.fit(X_train,y_train).predict(X_test)
+    accuracy=accuracy_score(y_pred,y_test)
+    roc_score=roc_auc_score(y_test,y_pred)
+    f1=f1_score(y_pred,y_test)
+    precision=precision_score(y_pred,y_test)
+    recall=recall_score(y_pred,y_test)
+    
+    results=pd.DataFrame({"Values":[accuracy,roc_score,f1,precision,recall],
+                         "Metrics":["Accuracy","ROC-AUC","F1","Precision","Recall"]})
+    
+    # Visualize Results:
+    fig=make_subplots(rows=1,cols=1)
+    fig.add_bar(x=[round(i,5) for i in results["Values"]],
+                        y=results["Metrics"],
+                        text=[round(i,5) for i in results["Values"]],orientation="h",textposition="inside",name="Values",
+                        marker=dict(color=["khaki","bisque","palegreen","skyblue","plum"],line_color="beige",line_width=1.5),row=1,col=1)
+    fig.update_layout(title={'text': model.__class__.__name__ ,
+                             'y':0.9,
+                             'x':0.5,
+                             'xanchor': 'center',
+                             'yanchor': 'top'},
+                      template='plotly_white')
+    fig.update_xaxes(range=[0,1], row = 1, col = 1)
+    
+    iplot(fig)
+    
+my_models= [
+    
+    LogisticRegression(),
+    KNeighborsClassifier(),
+    RandomForestClassifier(),
+    XGBClassifier(),
+    GradientBoostingClassifier(),
+    GaussianNB(),
+    DecisionTreeClassifier()
+
+
+]
+
+for model in my_models:
+    classification_models(model)
+
+```
+
+```{python}
+print("X_train shape",X_train.shape)
+print("y_train shape",y_train.shape)
+print("X_test shape",X_test.shape)
+print("y_test shape",y_test.shape)
+```
+
+*********

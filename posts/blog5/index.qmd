@@ -1,0 +1,173 @@
+```{python}
+import pandas as pd
+import numpy as np
+from numpy import percentile
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
+from sklearn.ensemble import IsolationForest
+
+from scipy import stats
+```
+
+```{python}
+df = pd.read_csv('Superstore.csv')
+df.head()
+```
+
+```{python}
+plt.scatter(range(df.shape[0]), np.sort(df['Sales'].values))
+plt.xlabel('index')
+plt.ylabel('Sales')
+plt.title("Sales distribution")
+sns.despine()
+```
+
+```{python}
+import warnings
+warnings.filterwarnings("ignore")
+sns.distplot(df['Sales'])
+plt.title("Distribution of Sales")
+sns.despine()
+```
+
+```{python}
+print("Skewness: %f" % df['Sales'].skew())
+print("Kurtosis: %f" % df['Sales'].kurt())
+```
+
+```{python}
+df.Profit.describe()
+```
+
+
+
+```{python}
+plt.scatter(range(df.shape[0]), np.sort(df['Profit'].values))
+plt.xlabel('index')
+plt.ylabel('Profit')
+plt.title("Profit distribution")
+sns.despine()
+```
+
+```{python}
+import warnings
+warnings.filterwarnings("ignore")
+sns.distplot(df['Profit'])
+plt.title("Distribution of Profit")
+sns.despine()
+```
+
+
+```{python}
+print("Skewness: %f" % df['Profit'].skew())
+print("Kurtosis: %f" % df['Profit'].kurt())
+```
+
+Univariate Anomaly Detection on Sales
+
+```{python}
+isolation_forest = IsolationForest(n_estimators=100, contamination=0.01)
+isolation_forest.fit(df['Sales'].values.reshape(-1, 1))
+df['anomaly_score_univariate_sales'] = isolation_forest.decision_function(df['Sales'].values.reshape(-1, 1))
+df['outlier_univariate_sales'] = isolation_forest.predict(df['Sales'].values.reshape(-1, 1))
+```
+
+
+```{python}
+xx = np.linspace(df['Sales'].min(), df['Sales'].max(), len(df)).reshape(-1,1)
+anomaly_score = isolation_forest.decision_function(xx)
+outlier = isolation_forest.predict(xx)
+
+plt.figure(figsize=(10,4))
+plt.plot(xx, anomaly_score, label='anomaly score')
+plt.fill_between(xx.T[0], np.min(anomaly_score), np.max(anomaly_score), 
+                 where=outlier==-1, color='r', 
+                 alpha=.4, label='outlier region')
+plt.legend()
+plt.ylabel('anomaly score')
+plt.xlabel('Sales')
+plt.show();
+```
+
+Anomaly detection on Profit
+
+```{python}
+isolation_forest = IsolationForest(n_estimators=100, contamination=0.01)
+isolation_forest.fit(df['Profit'].values.reshape(-1, 1))
+df['anomaly_score_univariate_profit'] = isolation_forest.decision_function(df['Profit'].values.reshape(-1, 1))
+df['outlier_univariate_profit'] = isolation_forest.predict(df['Profit'].values.reshape(-1, 1))
+```
+
+
+```{python}
+df.sort_values('anomaly_score_univariate_profit')
+```
+
+
+```{python}
+xx = np.linspace(df['Profit'].min(), df['Profit'].max(), len(df)).reshape(-1,1)
+anomaly_score = isolation_forest.decision_function(xx)
+outlier = isolation_forest.predict(xx)
+plt.figure(figsize=(10,4))
+plt.plot(xx, anomaly_score, label='anomaly score')
+plt.fill_between(xx.T[0], np.min(anomaly_score), np.max(anomaly_score), 
+                 where=outlier==-1, color='r', 
+                 alpha=.4, label='outlier region')
+plt.legend()
+plt.ylabel('anomaly score')
+plt.xlabel('Profit')
+plt.show();
+```
+
+```{python}
+df[(df['outlier_univariate_profit']==-1) & (df['outlier_univariate_sales']==-1)]
+```
+
+
+Multivariate Anomaly Detection
+
+```{python}
+sns.regplot(x="Sales", y="Profit", data=df)
+sns.despine();
+```
+
+
+```{python}
+minmax = MinMaxScaler(feature_range=(0, 1))
+X = minmax.fit_transform(df[['Sales','Profit']])
+```
+
+
+```{python}
+clf = IsolationForest(n_estimators=100, contamination=0.01, random_state=0)
+clf.fit(X)
+
+# predict raw anomaly score
+df['multivariate_anomaly_score'] = clf.decision_function(X)
+        
+# prediction of a datapoint category outlier or inlier
+df['multivariate_outlier'] = clf.predict(X)
+```
+
+```{python}
+plt.scatter(df['Sales'], df['Profit'],
+            c=df.multivariate_outlier, edgecolor='none', alpha=0.5,
+            cmap=plt.cm.get_cmap('Paired', 10))
+plt.xlabel('Sales')
+plt.ylabel('Profit')
+plt.colorbar();
+```
+
+```{python}
+df[(df['outlier_univariate_sales'] == 1) & (df['outlier_univariate_profit'] == 1) & (df['multivariate_outlier'] == -1)]
+```
+
+```{python}
+minmax = MinMaxScaler(feature_range=(0, 1))
+X = minmax.fit_transform(df[['Sales','Profit']])
+```
